@@ -1,45 +1,52 @@
 import { Server } from "socket.io";
 import Redis from "ioredis";
 
-// const pub = new Redis({
-//     host: "",
-//     port: 0,
-//     username: "default",
-//     password: "",
-//   });
+const pub = new Redis({
+  host: "",
+  port: 0,
+  username: "default",
+  password: "",
+});
 
-//   const sub = new Redis({
-//     host: "",
-//     port: 0,
-//     username: "",
-//     password: "",
-//   });
+const sub = new Redis({
+  host: "",
+  port: 0,
+  username: "default",
+  password: "",
+});
 
-class SocketServices {
+class SocketService {
   private _io: Server;
 
   constructor() {
-    console.log("Init Socket Server...");
+    console.log("Init Socket Service...");
     this._io = new Server({
       cors: {
         allowedHeaders: ["*"],
         origin: "*",
       },
     });
+    sub.subscribe("MESSAGES");
   }
 
   public initListeners() {
-    console.log("Init Socket Listeners...");
     const io = this.io;
+    console.log("Init Socket Listeners...");
 
     io.on("connect", (socket) => {
-      console.log("new socket connected", socket.id);
-
+      console.log(`New Socket Connected`, socket.id);
       socket.on("event:message", async ({ message }: { message: string }) => {
-        console.log("new message received", message);
+        console.log("New Message Rec.", message);
         // publish this message to redis
-        // await pub.publish("MESSAGES", JSON.stringify({ message }));
+        await pub.publish("MESSAGES", JSON.stringify({ message }));
       });
+    });
+
+    sub.on("message", async (channel, message) => {
+      if (channel === "MESSAGES") {
+        console.log("new message from redis", message);
+        io.emit("message", message);
+      }
     });
   }
 
@@ -48,4 +55,4 @@ class SocketServices {
   }
 }
 
-export default SocketServices;
+export default SocketService;
